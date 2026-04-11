@@ -62,6 +62,18 @@ public Persona (int id, String nombre, String contrasena, String correo, String 
         return edad;
     }
 
+    public void setEdad(int edad ){
+        this.edad = edad;
+    }
+
+    public String getCc() {
+        return cc;
+    }
+
+    public void setCc (String cc) {
+        this.cc = cc;
+    }
+
     public void actualizarInfo(String nombre, String correo, String numeroTelefono, int edad) {
         this.nombre = nombre;
         this.correo = correo;
