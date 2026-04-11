@@ -84,10 +84,4 @@ public class Ingreso {
             }
         }
     }
-
-    public static void main(String[] args) {
-        Ingreso ingreso1 = new Ingreso(1, 1, 1000.0, LocalDate.now(), "Salario");
-        ingreso1.registrarIngreso(1000, "Salario", LocalDate.now());
-        
-    }
 }

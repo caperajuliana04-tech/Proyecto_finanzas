@@ -1,10 +1,12 @@
 import java.time.LocalDate;
+import java.util.*;
 public class Meta {
     private int idMeta, idUsuario;
     private double montoObjetivo, montoActual;
     private LocalDate fechaRegistro;
     private LocalDate fechaEsperada;
     private String nombre;
+    private ArrayList<Meta> metas = new ArrayList<>();
 
   public Meta(int idMeta, int idUsuario, double montoObjetivo, LocalDate fechaRegistro, LocalDate fechaEsperada, String nombre) {
         this.idMeta = idMeta;
@@ -62,21 +64,57 @@ public class Meta {
     public void setNombre(String nombre) {
         this.nombre = nombre;
     }
+    public double getMontoActual() {
+        return montoActual;
+    }
+    public void setMontoActual(double montoActual) {
+        this.montoActual = montoActual;
+    }
     public void agregarMeta(int idUsuario, double montoObjetivo, LocalDate fechaRegistro, LocalDate fechaEsperada, String nombre) {
-
+        Meta meta = new Meta(0, idUsuario, montoObjetivo, fechaRegistro, fechaEsperada, nombre);
+        metas.add(meta);
     }
     public void actualizarMeta(int idMeta, double nuevoMontoObjetivo, LocalDate nuevaFechaEsperada, String nuevoNombre) {
-        if (this.idMeta == idMeta) {
-            this.montoObjetivo = nuevoMontoObjetivo;
-            this.fechaEsperada = nuevaFechaEsperada;
-            this.nombre = nuevoNombre;
+        for (Meta meta : metas) {
+            if (meta.getIdMeta() == idMeta) {
+                meta.setMontoObjetivo(nuevoMontoObjetivo);
+                meta.setFechaEsperada(nuevaFechaEsperada);
+                meta.setNombre(nuevoNombre);
+            }
         }
     }
     public void eliminarMeta(int idMeta) {
-        if (this.idMeta == idMeta) {
-            
+        for (Meta meta : metas) {
+            if (meta.getIdMeta() == idMeta) {
+                metas.remove(meta);
+            }
         }
     }
+    public Meta leeMeta(int idMeta) {
+        for (Meta meta : metas) {
+            if (meta.getIdMeta() == idMeta) {
+                return meta;
+            }
+        }
+        return null;
+     }
+     public ArrayList<Meta> listarMetasPorUsuario(int idUsuario) {
+        ArrayList<Meta> metasUsuario = new ArrayList<>();
+        for (Meta meta : metas) {
+            if (meta.getIdUsuario() == idUsuario) {
+                metasUsuario.add(meta);
+            }
+        }
+        return metasUsuario;    
+     }
+     public double calcularProgreso(int idMeta){
+        for (Meta meta : metas){
+            if (meta.getIdMeta() == idMeta) {
+                return (meta.getMontoActual() / meta.getMontoObjetivo()) * 100;
+            }
+        }
+        return 0;
+     }
     
 
 
