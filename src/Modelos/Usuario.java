@@ -1,3 +1,4 @@
+package Modelos;
 public class Usuario extends Persona {
     private double saldoActual;
 

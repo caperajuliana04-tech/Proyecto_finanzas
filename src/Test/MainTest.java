@@ -1,8 +1,12 @@
+package Test;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import Modelos.Usuario;
+import Modelos.Admin;
 
 public class MainTest {
     public static void main(String[] args) {
@@ -42,7 +46,7 @@ public class MainTest {
         // =========================
         // 2. CONEXION SQLITE
         // =========================
-        String url = "jdbc:sqlite:finanzas.db";
+        String url = "jdbc:sqlite:finanzas_test.db";
 
         try (Connection conn = DriverManager.getConnection(url)) {
             System.out.println("\nConexion SQLite establecida correctamente.");

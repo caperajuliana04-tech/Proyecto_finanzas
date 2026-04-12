@@ -1,3 +1,4 @@
+package Modelos;
 public class Admin extends Persona {
 
     public Admin (int id, String nombre, String contrasena, String correo, String numeroTelefono, int edad, String cc) {
