@@ -1,2 +1,0 @@
-Johan Sosa
-Samara acosta
