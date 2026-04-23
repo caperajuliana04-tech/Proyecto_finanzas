@@ -1,7 +1,6 @@
 import sqlite3
 from pathlib import Path
 
-
 DB_NAME = "finanzas.db"
 
 
@@ -10,192 +9,128 @@ def crear_base_datos(nombre_db: str = DB_NAME) -> None:
 
     with sqlite3.connect(ruta_db) as conn:
         conn.execute("PRAGMA foreign_keys = ON;")
-
         cursor = conn.cursor()
 
         cursor.executescript("""
         PRAGMA foreign_keys = ON;
 
+        DROP TABLE IF EXISTS recompensa;
+        DROP TABLE IF EXISTS alerta;
+        DROP TABLE IF EXISTS meta;
+        DROP TABLE IF EXISTS gasto;
+        DROP TABLE IF EXISTS ingreso;
+        DROP TABLE IF EXISTS admin;
+        DROP TABLE IF EXISTS usuario;
+
         ------------------------------------------------------------
-        -- TABLA BASE: PERSONA
+        -- USUARIO
+        -- Incluye los campos heredados de Persona + saldo_actual
         ------------------------------------------------------------
-        CREATE TABLE IF NOT EXISTS persona (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE usuario (
+            id INTEGER PRIMARY KEY,
             nombre TEXT NOT NULL,
             contrasena TEXT NOT NULL,
             correo TEXT NOT NULL UNIQUE,
-            numeroTelefono TEXT,
+            numero_telefono TEXT NOT NULL,
+            edad INTEGER NOT NULL CHECK (edad >= 0),
+            cc TEXT NOT NULL UNIQUE,
+            saldo_actual REAL NOT NULL DEFAULT 0 CHECK (saldo_actual >= 0)
+        );
+
+        ------------------------------------------------------------
+        -- ADMIN
+        -- Incluye los campos heredados de Persona
+        ------------------------------------------------------------
+        CREATE TABLE admin (
+            id INTEGER PRIMARY KEY,
+            nombre TEXT NOT NULL,
+            contrasena TEXT NOT NULL,
+            correo TEXT NOT NULL UNIQUE,
+            numero_telefono TEXT NOT NULL,
             edad INTEGER NOT NULL CHECK (edad >= 0),
             cc TEXT NOT NULL UNIQUE
         );
 
         ------------------------------------------------------------
-        -- HERENCIA: USUARIO
-        -- Usa el mismo id de persona
-        ------------------------------------------------------------
-        CREATE TABLE IF NOT EXISTS usuario (
-            id INTEGER PRIMARY KEY,
-            saldoActual REAL NOT NULL DEFAULT 0 CHECK (saldoActual >= 0),
-            FOREIGN KEY (id) REFERENCES persona(id) ON DELETE CASCADE ON UPDATE CASCADE
-        );
-
-        ------------------------------------------------------------
-        -- HERENCIA: ADMIN
-        -- Usa el mismo id de persona
-        ------------------------------------------------------------
-        CREATE TABLE IF NOT EXISTS admin (
-            id INTEGER PRIMARY KEY,
-            FOREIGN KEY (id) REFERENCES persona(id) ON DELETE CASCADE ON UPDATE CASCADE
-        );
-
-        ------------------------------------------------------------
         -- INGRESO
         ------------------------------------------------------------
-        CREATE TABLE IF NOT EXISTS ingreso (
-            idIngreso INTEGER PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE ingreso (
+            id_ingreso INTEGER PRIMARY KEY AUTOINCREMENT,
             monto REAL NOT NULL CHECK (monto >= 0),
             fecha TEXT NOT NULL,
             concepto TEXT NOT NULL,
-            idUsuario INTEGER NOT NULL,
-            FOREIGN KEY (idUsuario) REFERENCES usuario(id) ON DELETE CASCADE ON UPDATE CASCADE
+            id_usuario INTEGER NOT NULL,
+            FOREIGN KEY (id_usuario) REFERENCES usuario(id) ON DELETE CASCADE
         );
 
         ------------------------------------------------------------
         -- GASTO
         ------------------------------------------------------------
-        CREATE TABLE IF NOT EXISTS gasto (
-            idGasto INTEGER PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE gasto (
+            id_gasto INTEGER PRIMARY KEY AUTOINCREMENT,
             nombre TEXT NOT NULL,
             monto REAL NOT NULL CHECK (monto >= 0),
             fecha TEXT NOT NULL,
             categoria TEXT NOT NULL,
-            idUsuario INTEGER NOT NULL,
-            FOREIGN KEY (idUsuario) REFERENCES usuario(id) ON DELETE CASCADE ON UPDATE CASCADE
+            id_usuario INTEGER NOT NULL,
+            FOREIGN KEY (id_usuario) REFERENCES usuario(id) ON DELETE CASCADE
         );
 
         ------------------------------------------------------------
         -- META
         ------------------------------------------------------------
-        CREATE TABLE IF NOT EXISTS meta (
-            idMeta INTEGER PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE meta (
+            id_meta INTEGER PRIMARY KEY AUTOINCREMENT,
             nombre TEXT NOT NULL,
-            montoObjetivo REAL NOT NULL CHECK (montoObjetivo > 0),
-            montoActual REAL NOT NULL DEFAULT 0 CHECK (montoActual >= 0),
-            fechaRegistro TEXT NOT NULL,
-            fechaEsperada TEXT NOT NULL,
-            idUsuario INTEGER NOT NULL,
-            FOREIGN KEY (idUsuario) REFERENCES usuario(id) ON DELETE CASCADE ON UPDATE CASCADE
+            monto_objetivo REAL NOT NULL CHECK (monto_objetivo > 0),
+            monto_actual REAL NOT NULL DEFAULT 0 CHECK (monto_actual >= 0),
+            fecha_registro TEXT NOT NULL,
+            fecha_esperada TEXT NOT NULL,
+            id_usuario INTEGER NOT NULL,
+            FOREIGN KEY (id_usuario) REFERENCES usuario(id) ON DELETE CASCADE
         );
 
         ------------------------------------------------------------
         -- ALERTA
         ------------------------------------------------------------
-        CREATE TABLE IF NOT EXISTS alerta (
-            idAlerta INTEGER PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE alerta (
+            id_alerta INTEGER PRIMARY KEY AUTOINCREMENT,
             tipo TEXT NOT NULL,
             mensaje TEXT NOT NULL,
             fecha TEXT NOT NULL,
             leida INTEGER NOT NULL DEFAULT 0 CHECK (leida IN (0, 1)),
-            idUsuario INTEGER NOT NULL,
-            FOREIGN KEY (idUsuario) REFERENCES usuario(id) ON DELETE CASCADE ON UPDATE CASCADE
+            id_usuario INTEGER NOT NULL,
+            FOREIGN KEY (id_usuario) REFERENCES usuario(id) ON DELETE CASCADE
         );
 
         ------------------------------------------------------------
         -- RECOMPENSA
         ------------------------------------------------------------
-        CREATE TABLE IF NOT EXISTS recompensa (
-            idRecompensa INTEGER PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE recompensa (
+            id_recompensa INTEGER PRIMARY KEY AUTOINCREMENT,
             tipo TEXT NOT NULL,
             mensaje TEXT NOT NULL,
-            fechaDesbloqueo TEXT NOT NULL,
+            fecha_desbloqueo TEXT NOT NULL,
             desbloqueada INTEGER NOT NULL DEFAULT 0 CHECK (desbloqueada IN (0, 1)),
-            idUsuario INTEGER NOT NULL,
-            FOREIGN KEY (idUsuario) REFERENCES usuario(id) ON DELETE CASCADE ON UPDATE CASCADE
+            id_usuario INTEGER NOT NULL,
+            FOREIGN KEY (id_usuario) REFERENCES usuario(id) ON DELETE CASCADE
         );
 
         ------------------------------------------------------------
-        -- ÍNDICES
+        -- INDICES
         ------------------------------------------------------------
-        CREATE INDEX IF NOT EXISTS idx_ingreso_usuario ON ingreso(idUsuario);
-        CREATE INDEX IF NOT EXISTS idx_gasto_usuario ON gasto(idUsuario);
-        CREATE INDEX IF NOT EXISTS idx_meta_usuario ON meta(idUsuario);
-        CREATE INDEX IF NOT EXISTS idx_alerta_usuario ON alerta(idUsuario);
-        CREATE INDEX IF NOT EXISTS idx_recompensa_usuario ON recompensa(idUsuario);
-        CREATE INDEX IF NOT EXISTS idx_gasto_categoria ON gasto(categoria);
-
-        ------------------------------------------------------------
-        -- TRIGGERS PARA MANTENER saldoActual AUTOMÁTICAMENTE
-        -- saldoActual = sum(ingresos) - sum(gastos)
-        ------------------------------------------------------------
-
-        -- INGRESO: INSERT
-        CREATE TRIGGER IF NOT EXISTS trg_ingreso_insert
-        AFTER INSERT ON ingreso
-        BEGIN
-            UPDATE usuario
-            SET saldoActual = saldoActual + NEW.monto
-            WHERE id = NEW.idUsuario;
-        END;
-
-        -- INGRESO: DELETE
-        CREATE TRIGGER IF NOT EXISTS trg_ingreso_delete
-        AFTER DELETE ON ingreso
-        BEGIN
-            UPDATE usuario
-            SET saldoActual = saldoActual - OLD.monto
-            WHERE id = OLD.idUsuario;
-        END;
-
-        -- INGRESO: UPDATE
-        CREATE TRIGGER IF NOT EXISTS trg_ingreso_update
-        AFTER UPDATE OF monto, idUsuario ON ingreso
-        BEGIN
-            UPDATE usuario
-            SET saldoActual = saldoActual - OLD.monto
-            WHERE id = OLD.idUsuario;
-
-            UPDATE usuario
-            SET saldoActual = saldoActual + NEW.monto
-            WHERE id = NEW.idUsuario;
-        END;
-
-        -- GASTO: INSERT
-        CREATE TRIGGER IF NOT EXISTS trg_gasto_insert
-        AFTER INSERT ON gasto
-        BEGIN
-            UPDATE usuario
-            SET saldoActual = saldoActual - NEW.monto
-            WHERE id = NEW.idUsuario;
-        END;
-
-        -- GASTO: DELETE
-        CREATE TRIGGER IF NOT EXISTS trg_gasto_delete
-        AFTER DELETE ON gasto
-        BEGIN
-            UPDATE usuario
-            SET saldoActual = saldoActual + OLD.monto
-            WHERE id = OLD.idUsuario;
-        END;
-
-        -- GASTO: UPDATE
-        CREATE TRIGGER IF NOT EXISTS trg_gasto_update
-        AFTER UPDATE OF monto, idUsuario ON gasto
-        BEGIN
-            UPDATE usuario
-            SET saldoActual = saldoActual + OLD.monto
-            WHERE id = OLD.idUsuario;
-
-            UPDATE usuario
-            SET saldoActual = saldoActual - NEW.monto
-            WHERE id = NEW.idUsuario;
-        END;
+        CREATE INDEX idx_ingreso_usuario ON ingreso(id_usuario);
+        CREATE INDEX idx_gasto_usuario ON gasto(id_usuario);
+        CREATE INDEX idx_meta_usuario ON meta(id_usuario);
+        CREATE INDEX idx_alerta_usuario ON alerta(id_usuario);
+        CREATE INDEX idx_recompensa_usuario ON recompensa(id_usuario);
+        CREATE INDEX idx_gasto_categoria ON gasto(categoria);
         """)
 
         conn.commit()
 
         print(f"Base de datos creada correctamente: {ruta_db.resolve()}")
 
-        # Mostrar tablas creadas
         cursor.execute("""
             SELECT name
             FROM sqlite_master
@@ -205,7 +140,7 @@ def crear_base_datos(nombre_db: str = DB_NAME) -> None:
         """)
         tablas = cursor.fetchall()
 
-        print("\nTablas creadas:")
+        print("\\nTablas creadas:")
         for tabla in tablas:
             print(f"- {tabla[0]}")
 
