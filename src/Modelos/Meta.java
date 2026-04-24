@@ -1,122 +1,103 @@
 package Modelos;
+
+import db.ConexionDB;
+import java.sql.*;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+
+// Representa una meta de ahorro que un usuario desea alcanzar.
+// Gestiona la tabla "meta" con operaciones de inserción, listado y eliminación.
 public class Meta {
-    private int idMeta, idUsuario;
-    private double montoObjetivo, montoActual;
-    private LocalDate fechaRegistro;
-    private LocalDate fechaEsperada;
-    private String nombre;
-    private ArrayList<Meta> metas = new ArrayList<>();
 
-  public Meta(int idMeta, int idUsuario, double montoObjetivo, LocalDate fechaRegistro, LocalDate fechaEsperada, String nombre) {
+    private int idMeta;              // ID autogenerado por la base de datos
+    private int idUsuario;           // ID del usuario dueño de la meta
+    private double montoObjetivo;    // Monto total que se quiere ahorrar
+    private double montoActual;      // Monto ahorrado hasta el momento
+    private LocalDate fechaRegistro; // Fecha en que se creó la meta
+    private LocalDate fechaEsperada; // Fecha límite para alcanzar la meta
+    private String nombre;           // Nombre descriptivo de la meta (ej: "Vacaciones")
+
+    // Constructor completo
+    public Meta(int idMeta, int idUsuario, double montoObjetivo, double montoActual,
+                LocalDate fechaRegistro, LocalDate fechaEsperada, String nombre) {
         this.idMeta = idMeta;
         this.idUsuario = idUsuario;
         this.montoObjetivo = montoObjetivo;
-        this.fechaRegistro = fechaRegistro;
-        this.fechaEsperada = fechaEsperada;
-        this.nombre = nombre;
-    }
-
-    public int getIdMeta() {
-        return idMeta;
-    }
-
-    public void setIdMeta(int idMeta) {
-        this.idMeta = idMeta;
-    }
-
-    public int getIdUsuario() {
-        return idUsuario;
-    }
-
-    public void setIdUsuario(int idUsuario) {
-        this.idUsuario = idUsuario;
-    }
-
-    public double getMontoObjetivo() {
-        return montoObjetivo;
-    }
-
-    public void setMontoObjetivo(double montoObjetivo) {
-        this.montoObjetivo = montoObjetivo;
-    }
-
-    public LocalDate getFechaRegistro() {
-        return fechaRegistro;
-    }
-
-    public void setFechaRegistro(LocalDate fechaRegistro) {
-        this.fechaRegistro = fechaRegistro;
-    }
-
-    public LocalDate getFechaEsperada() {
-        return fechaEsperada;
-    }
-
-    public void setFechaEsperada(LocalDate fechaEsperada) {
-        this.fechaEsperada = fechaEsperada;
-    }
-
-    public String getNombre() {
-        return nombre;
-    }
-
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
-    }
-    public double getMontoActual() {
-        return montoActual;
-    }
-    public void setMontoActual(double montoActual) {
         this.montoActual = montoActual;
+        this.fechaRegistro = fechaRegistro;
+        this.fechaEsperada = fechaEsperada;
+        this.nombre = nombre;
     }
-    public void agregarMeta(int idUsuario, double montoObjetivo, LocalDate fechaRegistro, LocalDate fechaEsperada, String nombre) {
-        Meta meta = new Meta(0, idUsuario, montoObjetivo, fechaRegistro, fechaEsperada, nombre);
-        metas.add(meta);
-    }
-    public void actualizarMeta(int idMeta, double nuevoMontoObjetivo, LocalDate nuevaFechaEsperada, String nuevoNombre) {
-        for (Meta meta : metas) {
-            if (meta.getIdMeta() == idMeta) {
-                meta.setMontoObjetivo(nuevoMontoObjetivo);
-                meta.setFechaEsperada(nuevaFechaEsperada);
-                meta.setNombre(nuevoNombre);
-            }
-        }
-    }
-    public void eliminarMeta(int idMeta) {
-        for (Meta meta : metas) {
-            if (meta.getIdMeta() == idMeta) {
-                metas.remove(meta);
-            }
-        }
-    }
-    public Meta leeMeta(int idMeta) {
-        for (Meta meta : metas) {
-            if (meta.getIdMeta() == idMeta) {
-                return meta;
-            }
-        }
-        return null;
-     }
-     public ArrayList<Meta> listarMetasPorUsuario(int idUsuario) {
-        ArrayList<Meta> metasUsuario = new ArrayList<>();
-        for (Meta meta : metas) {
-            if (meta.getIdUsuario() == idUsuario) {
-                metasUsuario.add(meta);
-            }
-        }
-        return metasUsuario;    
-     }
-     public double calcularProgreso(int idMeta){
-        for (Meta meta : metas){
-            if (meta.getIdMeta() == idMeta) {
-                return (meta.getMontoActual() / meta.getMontoObjetivo()) * 100;
-            }
-        }
-        return 0;
-     }
-    
 
+    // --- Getters (solo lectura) ---
+    public int getIdMeta() { return idMeta; }
+    public int getIdUsuario() { return idUsuario; }
+    public double getMontoObjetivo() { return montoObjetivo; }
+    public double getMontoActual() { return montoActual; }
+    public LocalDate getFechaRegistro() { return fechaRegistro; }
+    public LocalDate getFechaEsperada() { return fechaEsperada; }
+    public String getNombre() { return nombre; }
 
+    // Calcula el porcentaje de avance de la meta.
+    // Evita división por cero si el objetivo es 0.
+    public double calcularProgreso() {
+        return montoObjetivo == 0 ? 0 : (montoActual / montoObjetivo) * 100;
+    }
+
+    // Inserta esta meta en la base de datos
+    public void agregarMeta() {
+        String sql = "INSERT INTO meta (nombre, monto_objetivo, monto_actual, fecha_registro, fecha_esperada, id_usuario) VALUES (?, ?, ?, ?, ?, ?)";
+        try (Connection con = ConexionDB.conectar();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, this.nombre);
+            ps.setDouble(2, this.montoObjetivo);
+            ps.setDouble(3, this.montoActual);
+            ps.setString(4, this.fechaRegistro.toString()); // "YYYY-MM-DD"
+            ps.setString(5, this.fechaEsperada.toString());
+            ps.setInt(6, this.idUsuario);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            System.out.println("Error al agregar meta: " + e.getMessage());
+        }
+    }
+
+    // Retorna todas las metas de un usuario ordenadas de la más reciente a la más antigua
+    public static List<Meta> listarMetasPorUsuario(int idUsuario) {
+        List<Meta> lista = new ArrayList<>();
+        String sql = "SELECT * FROM meta WHERE id_usuario = ? ORDER BY fecha_registro DESC";
+        try (Connection con = ConexionDB.conectar();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, idUsuario);
+            ResultSet rs = ps.executeQuery();
+            // Construye un objeto Meta por cada fila
+            while (rs.next()) {
+                lista.add(new Meta(
+                    rs.getInt("id_meta"),
+                    rs.getInt("id_usuario"),
+                    rs.getDouble("monto_objetivo"),
+                    rs.getDouble("monto_actual"),
+                    LocalDate.parse(rs.getString("fecha_registro")),
+                    LocalDate.parse(rs.getString("fecha_esperada")),
+                    rs.getString("nombre")
+                ));
+            }
+        } catch (SQLException e) {
+            System.out.println("Error al listar metas: " + e.getMessage());
+        }
+        return lista;
+    }
+
+    // Elimina una meta por su ID. Retorna true si se eliminó correctamente
+    public static boolean eliminarMeta(int idMeta) {
+        String sql = "DELETE FROM meta WHERE id_meta = ?";
+        try (Connection con = ConexionDB.conectar();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, idMeta);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("Error al eliminar meta: " + e.getMessage());
+            return false;
+        }
+    }
 }

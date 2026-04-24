@@ -6,121 +6,87 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+// Representa a un administrador del sistema.
+// Hereda todos los atributos de Persona y agrega operaciones CRUD sobre la tabla "admin".
 public class Admin extends Persona {
 
-    public Admin(int id, String nombre, String contrasena, String correo, String numeroTelefono, int edad, String cc) {
+    // Constructor: delega directamente al constructor de Persona
+    public Admin(int id, String nombre, String contrasena, String correo,
+                 String numeroTelefono, int edad, String cc) {
         super(id, nombre, contrasena, correo, numeroTelefono, edad, cc);
     }
 
+    // Inserta este administrador en la base de datos
     public void registrarAdmin() {
         String sql = "INSERT INTO admin (id, nombre, contrasena, correo, numero_telefono, edad, cc) VALUES (?, ?, ?, ?, ?, ?, ?)";
-
-        try (Connection conexion = ConexionDB.conectar();
-             PreparedStatement consultaPreparada = conexion.prepareStatement(sql)) {
-
-            consultaPreparada.setInt(1, this.getId());
-            consultaPreparada.setString(2, this.getNombre());
-            consultaPreparada.setString(3, this.getContrasena());
-            consultaPreparada.setString(4, this.getCorreo());
-            consultaPreparada.setString(5, this.getNumeroTelefono());
-            consultaPreparada.setInt(6, this.getEdad());
-            consultaPreparada.setString(7, this.getCc());
-
-            consultaPreparada.executeUpdate();
-            System.out.println("Admin registrado correctamente.");
-
+        try (Connection con = ConexionDB.conectar();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, this.getId());
+            ps.setString(2, this.getNombre());
+            ps.setString(3, this.getContrasena());
+            ps.setString(4, this.getCorreo());
+            ps.setString(5, this.getNumeroTelefono());
+            ps.setInt(6, this.getEdad());
+            ps.setString(7, this.getCc());
+            ps.executeUpdate();
         } catch (SQLException e) {
             System.out.println("Error al registrar admin: " + e.getMessage());
         }
     }
 
-    public static Admin leerPerfil(int idBuscado) {
+    // Busca y retorna un Admin por su ID; retorna null si no existe
+    public static Admin leerPerfil(int id) {
         String sql = "SELECT * FROM admin WHERE id = ?";
-
-        try (Connection conexion = ConexionDB.conectar();
-             PreparedStatement consultaPreparada = conexion.prepareStatement(sql)) {
-
-            consultaPreparada.setInt(1, idBuscado);
-            ResultSet resultado = consultaPreparada.executeQuery();
-
-            if (resultado.next()) {
+        try (Connection con = ConexionDB.conectar();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                // Construye el objeto Admin con los datos leídos de la fila
                 return new Admin(
-                    resultado.getInt("id"),
-                    resultado.getString("nombre"),
-                    resultado.getString("contrasena"),
-                    resultado.getString("correo"),
-                    resultado.getString("numero_telefono"),
-                    resultado.getInt("edad"),
-                    resultado.getString("cc")
+                    rs.getInt("id"),
+                    rs.getString("nombre"),
+                    rs.getString("contrasena"),
+                    rs.getString("correo"),
+                    rs.getString("numero_telefono"),
+                    rs.getInt("edad"),
+                    rs.getString("cc")
                 );
             }
-
         } catch (SQLException e) {
-            System.out.println("Error al leer perfil del admin: " + e.getMessage());
+            System.out.println("Error al leer admin: " + e.getMessage());
         }
-
         return null;
     }
 
+    // Actualiza los datos del administrador en la base de datos usando su ID como clave
     public void actualizarAdmin() {
-        String sql = "UPDATE admin SET nombre = ?, contrasena = ?, correo = ?, numero_telefono = ?, edad = ?, cc = ? WHERE id = ?";
-
-        try (Connection conexion = ConexionDB.conectar();
-             PreparedStatement consultaPreparada = conexion.prepareStatement(sql)) {
-
-            if (conexion == null) {
-                System.out.println("No se pudo conectar a la base de datos.");
-                return;
-            }
-
-            consultaPreparada.setString(1, this.getNombre());
-            consultaPreparada.setString(2, this.getContrasena());
-            consultaPreparada.setString(3, this.getCorreo());
-            consultaPreparada.setString(4, this.getNumeroTelefono());
-            consultaPreparada.setInt(5, this.getEdad());
-            consultaPreparada.setString(6, this.getCc());
-            consultaPreparada.setInt(7, this.getId());
-
-            int filasAfectadas = consultaPreparada.executeUpdate();
-
-            if (filasAfectadas > 0) {
-                System.out.println("Admin actualizado correctamente.");
-            } else {
-                System.out.println("No se encontró un admin con ese ID.");
-            }
-
+        String sql = "UPDATE admin SET nombre=?, contrasena=?, correo=?, numero_telefono=?, edad=?, cc=? WHERE id=?";
+        try (Connection con = ConexionDB.conectar();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, this.getNombre());
+            ps.setString(2, this.getContrasena());
+            ps.setString(3, this.getCorreo());
+            ps.setString(4, this.getNumeroTelefono());
+            ps.setInt(5, this.getEdad());
+            ps.setString(6, this.getCc());
+            ps.setInt(7, this.getId());
+            ps.executeUpdate();
         } catch (SQLException e) {
             System.out.println("Error al actualizar admin: " + e.getMessage());
         }
     }
 
-    public static boolean eliminarAdmin(int idBuscado) {
+    // Elimina un administrador por su ID. Retorna true si se borró al menos una fila
+    public static boolean eliminarAdmin(int id) {
         String sql = "DELETE FROM admin WHERE id = ?";
-
-        try (Connection conexion = ConexionDB.conectar();
-             PreparedStatement consultaPreparada = conexion.prepareStatement(sql)) {
-
-            if (conexion == null) {
-                System.out.println("No se pudo conectar a la base de datos.");
-                return false;
-            }
-
-            consultaPreparada.setInt(1, idBuscado);
-
-            int filasAfectadas = consultaPreparada.executeUpdate();
-
-            if (filasAfectadas > 0) {
-                System.out.println("Admin eliminado correctamente.");
-                return true;
-            } else {
-                System.out.println("No se encontró un admin con ese ID.");
-                return false;
-            }
-
+        try (Connection con = ConexionDB.conectar();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.out.println("Error al eliminar admin: " + e.getMessage());
             return false;
         }
     }
 }
-

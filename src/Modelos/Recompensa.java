@@ -1,48 +1,93 @@
 package Modelos;
+
+import db.ConexionDB;
+import java.sql.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+// Representa una recompensa o logro que un usuario puede desbloquear.
+// Gestiona la tabla "recompensa".
 public class Recompensa {
-    private int idRecompensa;   
-    private String tipo;
-    private String mensaje; 
-    private LocalDate fechaCreacion;
-    private boolean desbloqueada;
-    private int idUsuario;  
 
-    public Recompensa(int idRecompensa, String tipo, String mensaje, LocalDate fechaCreacion, boolean desbloqueada, int idUsuario) {
+    private int idRecompensa;         // ID autogenerado por la base de datos
+    private String tipo;              // Tipo de recompensa (ej: "Medalla", "Insignia")
+    private String mensaje;           // Descripción del logro (ej: "¡Primera meta cumplida!")
+    private LocalDate fechaDesbloqueo;// Fecha en que se desbloqueó o se asignó la recompensa
+    private boolean desbloqueada;     // true si el usuario ya la obtuvo
+    private int idUsuario;            // ID del usuario al que pertenece
+
+    // Constructor completo
+    public Recompensa(int idRecompensa, String tipo, String mensaje, LocalDate fechaDesbloqueo,
+                      boolean desbloqueada, int idUsuario) {
         this.idRecompensa = idRecompensa;
         this.tipo = tipo;
         this.mensaje = mensaje;
-        this.fechaCreacion = fechaCreacion;
+        this.fechaDesbloqueo = fechaDesbloqueo;
         this.desbloqueada = desbloqueada;
         this.idUsuario = idUsuario;
     }
 
-    public static Recompensa crearRecompensa(String tipo, String mensaje, LocalDate fechaCreacion, int idUsuario) {
-        Recompensa recompensa1 = new Recompensa(1, tipo, mensaje, fechaCreacion, false, idUsuario);
-        return recompensa1;
-    }
+    // --- Getters (solo lectura) ---
+    public int getIdRecompensa() { return idRecompensa; }
+    public String getTipo() { return tipo; }
+    public String getMensaje() { return mensaje; }
+    public LocalDate getFechaDesbloqueo() { return fechaDesbloqueo; }
+    public boolean isDesbloqueada() { return desbloqueada; }
+    public int getIdUsuario() { return idUsuario; }
 
-    public void eliminarRecompensa(int idRecompensa) {
-        if (this.idRecompensa == idRecompensa) {
-            System.out.println("Recompensa eliminada: " + this.idRecompensa);
-        } else {
-            System.out.println("No se encontró la recompensa con ID: " + idRecompensa);
+    // Inserta esta recompensa en la base de datos.
+    // "desbloqueada" se guarda como entero (1/0) porque SQLite no tiene tipo booleano nativo.
+    public void crearRecompensa() {
+        String sql = "INSERT INTO recompensa (tipo, mensaje, fecha_desbloqueo, desbloqueada, id_usuario) VALUES (?, ?, ?, ?, ?)";
+        try (Connection con = ConexionDB.conectar();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, this.tipo);
+            ps.setString(2, this.mensaje);
+            ps.setString(3, this.fechaDesbloqueo.toString()); // "YYYY-MM-DD"
+            ps.setInt(4, this.desbloqueada ? 1 : 0);          // booleano → entero
+            ps.setInt(5, this.idUsuario);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            System.out.println("Error al crear recompensa: " + e.getMessage());
         }
     }
 
-    public static Recompensa leerRecompensa(int idRecompensa) {
-        //Con el id buscar la recompensa 
-        //Mostrar recompensa 
-        Recompensa recompensaLeida = new Recompensa(idRecompensa, "Tipo de recompensa", "Mensaje de recompensa", LocalDate.now(), false, 1);
-        return recompensaLeida;
+    // Retorna todas las recompensas de un usuario ordenadas de la más reciente a la más antigua
+    public static List<Recompensa> listarRecompensasPorUsuario(int idUsuario) {
+        List<Recompensa> lista = new ArrayList<>();
+        String sql = "SELECT * FROM recompensa WHERE id_usuario = ? ORDER BY fecha_desbloqueo DESC";
+        try (Connection con = ConexionDB.conectar();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, idUsuario);
+            ResultSet rs = ps.executeQuery();
+            // Construye un objeto Recompensa por cada fila; convierte "desbloqueada" de int a boolean
+            while (rs.next()) {
+                lista.add(new Recompensa(
+                    rs.getInt("id_recompensa"),
+                    rs.getString("tipo"),
+                    rs.getString("mensaje"),
+                    LocalDate.parse(rs.getString("fecha_desbloqueo")),
+                    rs.getInt("desbloqueada") == 1, // 1 → true, 0 → false
+                    rs.getInt("id_usuario")
+                ));
+            }
+        } catch (SQLException e) {
+            System.out.println("Error al listar recompensas: " + e.getMessage());
+        }
+        return lista;
     }
 
-    public List<Recompensa> listarRecompensas(int idUsuario) {
-        List<Recompensa> recompensas = new ArrayList<>();
-        // Buscar en la base de datos las recompensas del usuario y agregar a lista
-        return recompensas;
+    // Elimina una recompensa por su ID. Retorna true si se eliminó correctamente
+    public static boolean eliminarRecompensa(int idRecompensa) {
+        String sql = "DELETE FROM recompensa WHERE id_recompensa = ?";
+        try (Connection con = ConexionDB.conectar();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, idRecompensa);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.out.println("Error al eliminar recompensa: " + e.getMessage());
+            return false;
+        }
     }
 }

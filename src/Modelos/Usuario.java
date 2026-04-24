@@ -6,133 +6,112 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+// Representa al usuario final de la aplicación.
+// Hereda de Persona y agrega saldo, más operaciones CRUD sobre la tabla "usuario".
 public class Usuario extends Persona {
-    private double saldoActual;
 
-    public Usuario(int id, String nombre, String contrasena, String correo, String numeroTelefono, int edad, String cc, double saldoActual) {
+    private double saldoActual; // Saldo disponible en cuenta, se actualiza al registrar ingresos/gastos
+
+    // Constructor completo
+    public Usuario(int id, String nombre, String contrasena, String correo,
+                   String numeroTelefono, int edad, String cc, double saldoActual) {
         super(id, nombre, contrasena, correo, numeroTelefono, edad, cc);
         this.saldoActual = saldoActual;
     }
 
-    public double getSaldoActual() {
-        return saldoActual;
-    }
+    public double getSaldoActual() { return saldoActual; }
+    public void setSaldoActual(double saldoActual) { this.saldoActual = saldoActual; }
 
-    public void setSaldoActual(double saldoActual) {
-        this.saldoActual = saldoActual;
-    }
-
+    // Inserta este usuario en la base de datos con todos sus campos
     public void registrarUsuario() {
         String sql = "INSERT INTO usuario (id, nombre, contrasena, correo, numero_telefono, edad, cc, saldo_actual) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-
-        try (Connection conexion = ConexionDB.conectar();
-             PreparedStatement consultaPreparada = conexion.prepareStatement(sql)) {
-
-            consultaPreparada.setInt(1, this.getId());
-            consultaPreparada.setString(2, this.getNombre());
-            consultaPreparada.setString(3, this.getContrasena());
-            consultaPreparada.setString(4, this.getCorreo());
-            consultaPreparada.setString(5, this.getNumeroTelefono());
-            consultaPreparada.setInt(6, this.getEdad());
-            consultaPreparada.setString(7, this.getCc());
-            consultaPreparada.setDouble(8, this.getSaldoActual());
-
-            consultaPreparada.executeUpdate();
-            System.out.println("Usuario registrado correctamente.");
-
+        try (Connection con = ConexionDB.conectar();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, this.getId());
+            ps.setString(2, this.getNombre());
+            ps.setString(3, this.getContrasena());
+            ps.setString(4, this.getCorreo());
+            ps.setString(5, this.getNumeroTelefono());
+            ps.setInt(6, this.getEdad());
+            ps.setString(7, this.getCc());
+            ps.setDouble(8, this.getSaldoActual());
+            ps.executeUpdate();
         } catch (SQLException e) {
             System.out.println("Error al registrar usuario: " + e.getMessage());
         }
     }
 
-    public static Usuario leerPerfil(int idBuscado) {
-        String sql = "SELECT * FROM usuario WHERE id = ?";
+    // Busca un usuario por su ID numérico (usado al verificar si ya existe al registrar)
+    public static Usuario leerPerfil(int id) {
+        return buscar("SELECT * FROM usuario WHERE id = ?", ps -> ps.setInt(1, id));
+    }
 
-        try (Connection conexion = ConexionDB.conectar();
-             PreparedStatement consultaPreparada = conexion.prepareStatement(sql)) {
+    // Busca un usuario por correo electrónico (usado en el login)
+    public static Usuario buscarPorCorreo(String correo) {
+        return buscar("SELECT * FROM usuario WHERE correo = ?", ps -> ps.setString(1, correo));
+    }
 
-            consultaPreparada.setInt(1, idBuscado);
-            ResultSet resultado = consultaPreparada.executeQuery();
-
-            if (resultado.next()) {
+    // Método privado reutilizable que ejecuta cualquier SELECT de usuario y construye el objeto.
+    // Recibe la SQL y un "preparador" funcional que asigna el parámetro de búsqueda.
+    private static Usuario buscar(String sql, ConsultaSQL preparador) {
+        try (Connection con = ConexionDB.conectar();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            preparador.preparar(ps);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
                 return new Usuario(
-                    resultado.getInt("id"),
-                    resultado.getString("nombre"),
-                    resultado.getString("contrasena"),
-                    resultado.getString("correo"),
-                    resultado.getString("numero_telefono"),
-                    resultado.getInt("edad"),
-                    resultado.getString("cc"),
-                    resultado.getDouble("saldo_actual")
+                    rs.getInt("id"),
+                    rs.getString("nombre"),
+                    rs.getString("contrasena"),
+                    rs.getString("correo"),
+                    rs.getString("numero_telefono"),
+                    rs.getInt("edad"),
+                    rs.getString("cc"),
+                    rs.getDouble("saldo_actual")
                 );
             }
-
         } catch (SQLException e) {
-            System.out.println("Error al leer perfil: " + e.getMessage());
+            System.out.println("Error al buscar usuario: " + e.getMessage());
         }
-
         return null;
     }
 
+    // Actualiza todos los campos editables del usuario en la base de datos
     public void actualizarUsuario() {
-        String sql = "UPDATE usuario SET nombre = ?, contrasena = ?, correo = ?, numero_telefono = ?, edad = ?, cc = ?, saldo_actual = ? WHERE id = ?";
-
-        try (Connection conexion = ConexionDB.conectar();
-             PreparedStatement consultaPreparada = conexion.prepareStatement(sql)) {
-
-            if (conexion == null) {
-                System.out.println("No se pudo conectar a la base de datos.");
-                return;
-            }
-
-            consultaPreparada.setString(1, this.getNombre());
-            consultaPreparada.setString(2, this.getContrasena());
-            consultaPreparada.setString(3, this.getCorreo());
-            consultaPreparada.setString(4, this.getNumeroTelefono());
-            consultaPreparada.setInt(5, this.getEdad());
-            consultaPreparada.setString(6, this.getCc());
-            consultaPreparada.setDouble(7, this.getSaldoActual());
-            consultaPreparada.setInt(8, this.getId());
-
-            int filasAfectadas = consultaPreparada.executeUpdate();
-
-            if (filasAfectadas > 0) {
-                System.out.println("Usuario actualizado correctamente.");
-            } else {
-                System.out.println("No se encontró un usuario con ese ID.");
-            }
-
+        String sql = "UPDATE usuario SET nombre=?, contrasena=?, correo=?, numero_telefono=?, edad=?, cc=?, saldo_actual=? WHERE id=?";
+        try (Connection con = ConexionDB.conectar();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, this.getNombre());
+            ps.setString(2, this.getContrasena());
+            ps.setString(3, this.getCorreo());
+            ps.setString(4, this.getNumeroTelefono());
+            ps.setInt(5, this.getEdad());
+            ps.setString(6, this.getCc());
+            ps.setDouble(7, this.getSaldoActual());
+            ps.setInt(8, this.getId());
+            ps.executeUpdate();
         } catch (SQLException e) {
             System.out.println("Error al actualizar usuario: " + e.getMessage());
         }
     }
 
-    public static boolean eliminarUsuario(int idBuscado) {
+    // Elimina un usuario por su ID. Retorna true si se eliminó correctamente
+    public static boolean eliminarUsuario(int id) {
         String sql = "DELETE FROM usuario WHERE id = ?";
-
-        try (Connection conexion = ConexionDB.conectar();
-             PreparedStatement consultaPreparada = conexion.prepareStatement(sql)) {
-
-            if (conexion == null) {
-                System.out.println("No se pudo conectar a la base de datos.");
-                return false;
-            }
-
-            consultaPreparada.setInt(1, idBuscado);
-
-            int filasAfectadas = consultaPreparada.executeUpdate();
-
-            if (filasAfectadas > 0) {
-                System.out.println("Usuario eliminado correctamente.");
-                return true;
-            } else {
-                System.out.println("No se encontró un usuario con ese ID.");
-                return false;
-            }
-
+        try (Connection con = ConexionDB.conectar();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             System.out.println("Error al eliminar usuario: " + e.getMessage());
             return false;
         }
     }
-}   
+
+    // Interfaz funcional interna: permite pasar el parámetro de la consulta como lambda.
+    // Ejemplo de uso: ps -> ps.setInt(1, id)
+    @FunctionalInterface
+    private interface ConsultaSQL {
+        void preparar(PreparedStatement ps) throws SQLException;
+    }
+}
