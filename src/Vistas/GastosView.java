@@ -1,6 +1,9 @@
 package Vistas;
 
+import Modelos.Alerta;
+import Modelos.AnalizadorFinanciero;
 import Modelos.Gasto;
+import Modelos.Ingreso;
 import Modelos.Usuario;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -13,6 +16,7 @@ import javafx.scene.layout.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 // Vista para registrar y visualizar los gastos del usuario.
 // Contiene un formulario de entrada y una tabla con el historial de gastos.
@@ -193,6 +197,29 @@ public class GastosView extends BorderPane {
         mostrarMensaje("Gasto registrado correctamente.", true);
         limpiar();
         cargarDatos();
+
+        // Análisis automático: evaluar condiciones de alerta tras registrar el gasto.
+        // Se verifica primero si ya existe una alerta pendiente del mismo tipo para evitar duplicados.
+        List<Ingreso> ingresos = Ingreso.listarIngresosPorUsuario(usuario.getId());
+        List<Gasto> todosGastos = Gasto.listarGastosPorUsuario(usuario.getId());
+        double totalI = AnalizadorFinanciero.calcularTotalIngresos(ingresos);
+        double totalG = AnalizadorFinanciero.calcularTotalGastos(todosGastos);
+        Map<String, Double> porCategoria = AnalizadorFinanciero.agruparGastosPorCategoria(todosGastos);
+
+        Alerta alertaDeficit = AnalizadorFinanciero.generarAlertaDeficit(totalI, totalG, usuario.getId());
+        if (alertaDeficit != null && !Alerta.existeAlertaPendiente(usuario.getId(), alertaDeficit.getTipo())) {
+            alertaDeficit.crearAlerta();
+        }
+
+        Alerta alertaPrecaucion = AnalizadorFinanciero.generarAlertaPrecaucion(totalI, totalG, usuario.getId());
+        if (alertaPrecaucion != null && !Alerta.existeAlertaPendiente(usuario.getId(), alertaPrecaucion.getTipo())) {
+            alertaPrecaucion.crearAlerta();
+        }
+
+        Alerta alertaConcentracion = AnalizadorFinanciero.generarAlertaConcentracion(porCategoria, totalG, usuario.getId());
+        if (alertaConcentracion != null && !Alerta.existeAlertaPendiente(usuario.getId(), alertaConcentracion.getTipo())) {
+            alertaConcentracion.crearAlerta();
+        }
     }
 
     // Limpia todos los campos del formulario

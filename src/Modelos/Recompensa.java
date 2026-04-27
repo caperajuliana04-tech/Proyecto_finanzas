@@ -53,6 +53,22 @@ public class Recompensa {
         }
     }
 
+    // Verifica si ya existe una recompensa del mismo tipo para este usuario.
+    // Evita otorgar la misma recompensa más de una vez.
+    public static boolean existeRecompensa(int idUsuario, String tipo) {
+        String sql = "SELECT COUNT(*) FROM recompensa WHERE id_usuario = ? AND tipo = ?";
+        try (Connection con = ConexionDB.conectar();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, idUsuario);
+            ps.setString(2, tipo);
+            ResultSet rs = ps.executeQuery();
+            return rs.next() && rs.getInt(1) > 0;
+        } catch (SQLException e) {
+            System.out.println("Error al verificar recompensa: " + e.getMessage());
+            return false;
+        }
+    }
+
     // Retorna todas las recompensas de un usuario ordenadas de la más reciente a la más antigua
     public static List<Recompensa> listarRecompensasPorUsuario(int idUsuario) {
         List<Recompensa> lista = new ArrayList<>();

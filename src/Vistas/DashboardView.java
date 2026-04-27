@@ -56,6 +56,7 @@ public class DashboardView extends BorderPane {
         Button btnMetas       = crearBotonNav("🎯  Metas");
         Button btnAlertas     = crearBotonNav("🔔  Alertas");
         Button btnRecompensas = crearBotonNav("🏆  Recompensas");
+        Button btnGraficas    = crearBotonNav("📊  Gráficas");
         Button btnPerfil      = crearBotonNav("👤  Mi perfil");
 
         // Al hacer clic en cada botón se carga la vista correspondiente en el centro
@@ -65,6 +66,7 @@ public class DashboardView extends BorderPane {
         btnMetas.setOnAction(e       -> cargarVista(new MetasView(usuario), btnMetas));
         btnAlertas.setOnAction(e     -> cargarVista(new AlertasView(usuario), btnAlertas));
         btnRecompensas.setOnAction(e -> cargarVista(new RecompensasView(usuario), btnRecompensas));
+        btnGraficas.setOnAction(e    -> cargarVista(new GraficasView(usuario), btnGraficas));
         btnPerfil.setOnAction(e      -> cargarVista(new PerfilView(usuario), btnPerfil));
 
         // Espaciador flexible: empuja el botón de cerrar sesión hacia el fondo del sidebar
@@ -80,7 +82,7 @@ public class DashboardView extends BorderPane {
         sidebar.getChildren().addAll(
             appName, nombreUsuario,
             btnInicio, btnIngresos, btnGastos, btnMetas,
-            btnAlertas, btnRecompensas, btnPerfil,
+            btnAlertas, btnRecompensas, btnGraficas, btnPerfil,
             espaciador, btnSalir
         );
 

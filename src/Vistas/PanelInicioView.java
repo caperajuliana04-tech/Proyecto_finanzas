@@ -1,6 +1,7 @@
 package Vistas;
 
 import Modelos.Alerta;
+import Modelos.AnalizadorFinanciero;
 import Modelos.Gasto;
 import Modelos.Ingreso;
 import Modelos.Meta;
@@ -37,13 +38,14 @@ public class PanelInicioView extends BorderPane {
         titulo.getStyleClass().add("content-title");
 
         HBox tarjetas = crearTarjetas(); // Fila de tarjetas de resumen
+        HBox estadoFinanciero = crearEstadoFinanciero(); // Estado financiero y porcentaje gastado
 
         Label labelAlertas = new Label("Alertas recientes");
         labelAlertas.getStyleClass().add("section-label");
 
         VBox listaAlertas = crearListaAlertas(); // Lista de las últimas alertas
 
-        contenido.getChildren().addAll(titulo, tarjetas, labelAlertas, listaAlertas);
+        contenido.getChildren().addAll(titulo, tarjetas, estadoFinanciero, labelAlertas, listaAlertas);
 
         // ScrollPane permite desplazarse si el contenido excede la altura de la ventana
         ScrollPane scroll = new ScrollPane(contenido);
@@ -83,6 +85,38 @@ public class PanelInicioView extends BorderPane {
         HBox.setHgrow(cardMetas, Priority.ALWAYS);
 
         return tarjetas;
+    }
+
+    // Crea la fila de estado financiero: muestra SUPERAVIT/EQUILIBRIO/DEFICIT y % del ingreso gastado
+    private HBox crearEstadoFinanciero() {
+        List<Ingreso> ingresos = Ingreso.listarIngresosPorUsuario(usuario.getId());
+        List<Gasto> gastos = Gasto.listarGastosPorUsuario(usuario.getId());
+        double totalI = AnalizadorFinanciero.calcularTotalIngresos(ingresos);
+        double totalG = AnalizadorFinanciero.calcularTotalGastos(gastos);
+
+        String estado = AnalizadorFinanciero.determinarEstadoFinanciero(totalI, totalG);
+        double porcentaje = AnalizadorFinanciero.calcularPorcentajeGasto(totalG, totalI);
+
+        // Color del estado según si es positivo, neutro o negativo
+        String colorEstado;
+        if ("SUPERAVIT".equals(estado)) {
+            colorEstado = "#16a34a"; // verde
+        } else if ("EQUILIBRIO".equals(estado)) {
+            colorEstado = "#d97706"; // naranja
+        } else {
+            colorEstado = "#dc2626"; // rojo
+        }
+
+        Label lblEstado = new Label("Estado financiero: " + estado);
+        lblEstado.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: " + colorEstado + ";");
+
+        Label lblPorcentaje = new Label(String.format("%.0f%% del ingreso gastado", porcentaje));
+        lblPorcentaje.setStyle("-fx-font-size: 13px; -fx-text-fill: #64748b;");
+
+        HBox fila = new HBox(24, lblEstado, lblPorcentaje);
+        fila.getStyleClass().add("content-card");
+        fila.setAlignment(Pos.CENTER_LEFT);
+        return fila;
     }
 
     // Construye una tarjeta individual con icono, valor numérico y etiqueta descriptiva

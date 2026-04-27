@@ -285,3 +285,104 @@
     -fx-text-fill: #64748b;
     -fx-padding: 0 0 6 0;
 }
+
+/* ── Charts ──────────────────────────────────────
+   The root background is dark so chart axes inherit
+   white text — override every chart text element to
+   dark so they are visible on the white card.        */
+.chart {
+    -fx-background-color: transparent;
+    -fx-padding: 8 4 8 4;
+}
+
+.chart-plot-background {
+    -fx-background-color: #f8fafc;
+    -fx-border-color: #e2e8f0;
+    -fx-border-width: 1;
+}
+
+.chart-title {
+    -fx-text-fill: #1e293b;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+/* Axis lines */
+.axis {
+    -fx-tick-mark-visible: true;
+    -fx-minor-tick-visible: false;
+    -fx-tick-label-fill:   #1e293b;
+    -fx-tick-mark-fill:    #94a3b8;
+}
+
+.axis-label {
+    -fx-text-fill:   #1e293b;
+    -fx-font-size:   12px;
+    -fx-font-weight: bold;
+}
+
+.axis > .axis-tick-mark {
+    -fx-stroke: #94a3b8;
+}
+
+/* Tick label Text nodes and any chart text */
+.axis .text {
+    -fx-fill:      #1e293b;
+    -fx-font-size: 12px;
+}
+
+.chart-pie-label {
+    -fx-fill:      #1e293b;
+    -fx-font-size: 12px;
+}
+
+.chart-horizontal-grid-lines {
+    -fx-stroke: #e2e8f0;
+    -fx-stroke-width: 1;
+}
+
+.chart-vertical-grid-lines {
+    -fx-stroke: #e2e8f0;
+    -fx-stroke-width: 1;
+}
+
+.chart-horizontal-zero-line,
+.chart-vertical-zero-line {
+    -fx-stroke: #94a3b8;
+}
+
+.chart-legend {
+    -fx-background-color: transparent;
+    -fx-text-fill: #1e293b;
+}
+
+.chart-legend-item-symbol {
+    -fx-background-radius: 4;
+}
+
+.chart-legend .label {
+    -fx-text-fill: #1e293b;
+    -fx-font-size: 12px;
+}
+
+/* PieChart slice labels */
+.pie-chart .chart-pie-label-line {
+    -fx-stroke: #94a3b8;
+}
+
+/* BarChart bar color */
+.default-color0.chart-bar {
+    -fx-bar-fill: #2563eb;
+}
+
+/* LineChart line and symbol */
+.default-color0.chart-series-line {
+    -fx-stroke: #2563eb;
+    -fx-stroke-width: 2.5;
+}
+
+.default-color0.chart-line-symbol {
+    -fx-background-color: #2563eb, white;
+    -fx-background-radius: 5;
+    -fx-padding: 5;
+}

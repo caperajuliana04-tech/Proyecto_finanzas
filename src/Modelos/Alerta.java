@@ -66,6 +66,22 @@ public class Alerta {
         }
     }
 
+    // Verifica si ya existe una alerta no leída del mismo tipo para este usuario.
+    // Evita crear alertas duplicadas cuando la condición de riesgo persiste.
+    public static boolean existeAlertaPendiente(int idUsuario, String tipo) {
+        String sql = "SELECT COUNT(*) FROM alerta WHERE id_usuario = ? AND tipo = ? AND leida = 0";
+        try (Connection con = ConexionDB.conectar();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, idUsuario);
+            ps.setString(2, tipo);
+            ResultSet rs = ps.executeQuery();
+            return rs.next() && rs.getInt(1) > 0;
+        } catch (SQLException e) {
+            System.out.println("Error al verificar alerta pendiente: " + e.getMessage());
+            return false;
+        }
+    }
+
     // Retorna todas las alertas de un usuario ordenadas de la más reciente a la más antigua
     public static List<Alerta> listarAlertasPorUsuario(int idUsuario) {
         List<Alerta> lista = new ArrayList<>();

@@ -1,6 +1,11 @@
 package Vistas;
 
+import Modelos.Alerta;
+import Modelos.AnalizadorFinanciero;
+import Modelos.Gasto;
 import Modelos.Ingreso;
+import Modelos.Meta;
+import Modelos.Recompensa;
 import Modelos.Usuario;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -13,6 +18,7 @@ import javafx.scene.layout.*;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 // Vista para registrar y visualizar los ingresos del usuario.
 // Contiene un formulario de entrada y una tabla con el historial de ingresos.
@@ -188,6 +194,40 @@ public class IngresosView extends BorderPane {
         mostrarMensaje("Ingreso registrado correctamente.", true);
         limpiar();
         cargarDatos(); // Refresca la tabla para mostrar el nuevo registro
+
+        // Análisis automático: evaluar condiciones de alerta y recompensa tras registrar el ingreso.
+        // Se verifica primero si ya existe una alerta o recompensa del mismo tipo para evitar duplicados.
+        List<Ingreso> todosIngresos = Ingreso.listarIngresosPorUsuario(usuario.getId());
+        List<Gasto> gastos = Gasto.listarGastosPorUsuario(usuario.getId());
+        List<Meta> metas = Meta.listarMetasPorUsuario(usuario.getId());
+        double totalI = AnalizadorFinanciero.calcularTotalIngresos(todosIngresos);
+        double totalG = AnalizadorFinanciero.calcularTotalGastos(gastos);
+        Map<String, Double> porCategoria = AnalizadorFinanciero.agruparGastosPorCategoria(gastos);
+
+        Alerta alertaDeficit = AnalizadorFinanciero.generarAlertaDeficit(totalI, totalG, usuario.getId());
+        if (alertaDeficit != null && !Alerta.existeAlertaPendiente(usuario.getId(), alertaDeficit.getTipo())) {
+            alertaDeficit.crearAlerta();
+        }
+
+        Alerta alertaPrecaucion = AnalizadorFinanciero.generarAlertaPrecaucion(totalI, totalG, usuario.getId());
+        if (alertaPrecaucion != null && !Alerta.existeAlertaPendiente(usuario.getId(), alertaPrecaucion.getTipo())) {
+            alertaPrecaucion.crearAlerta();
+        }
+
+        Alerta alertaConcentracion = AnalizadorFinanciero.generarAlertaConcentracion(porCategoria, totalG, usuario.getId());
+        if (alertaConcentracion != null && !Alerta.existeAlertaPendiente(usuario.getId(), alertaConcentracion.getTipo())) {
+            alertaConcentracion.crearAlerta();
+        }
+
+        Recompensa recompensaSuperavit = AnalizadorFinanciero.evaluarRecompensaSuperavit(totalI, totalG, usuario.getId());
+        if (recompensaSuperavit != null && !Recompensa.existeRecompensa(usuario.getId(), recompensaSuperavit.getTipo())) {
+            recompensaSuperavit.crearRecompensa();
+        }
+
+        Recompensa recompensaMetaAvanzada = AnalizadorFinanciero.evaluarRecompensaMetaAvanzada(metas, usuario.getId());
+        if (recompensaMetaAvanzada != null && !Recompensa.existeRecompensa(usuario.getId(), recompensaMetaAvanzada.getTipo())) {
+            recompensaMetaAvanzada.crearRecompensa();
+        }
     }
 
     // Limpia todos los campos del formulario y restaura la fecha al día de hoy

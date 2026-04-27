@@ -1,6 +1,9 @@
 package Vistas;
 
+import Modelos.Alerta;
+import Modelos.AnalizadorFinanciero;
 import Modelos.Meta;
+import Modelos.Recompensa;
 import Modelos.Usuario;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -202,6 +205,25 @@ public class MetasView extends BorderPane {
         mostrarMensaje("Meta registrada correctamente.", true);
         limpiar();
         cargarDatos();
+
+        // Evaluación automática de alertas y recompensas según el progreso de las metas.
+        // Se evitan duplicados verificando si ya existe una alerta o recompensa del mismo tipo.
+        List<Meta> todasMetas = Meta.listarMetasPorUsuario(usuario.getId());
+
+        Alerta alertaProgreso = AnalizadorFinanciero.generarAlertaMetaProgreso(todasMetas, usuario.getId());
+        if (alertaProgreso != null && !Alerta.existeAlertaPendiente(usuario.getId(), alertaProgreso.getTipo())) {
+            alertaProgreso.crearAlerta();
+        }
+
+        Recompensa recompensaAvanzada = AnalizadorFinanciero.evaluarRecompensaMetaAvanzada(todasMetas, usuario.getId());
+        if (recompensaAvanzada != null && !Recompensa.existeRecompensa(usuario.getId(), recompensaAvanzada.getTipo())) {
+            recompensaAvanzada.crearRecompensa();
+        }
+
+        Recompensa recompensaCumplida = AnalizadorFinanciero.evaluarRecompensaMetaCumplida(todasMetas, usuario.getId());
+        if (recompensaCumplida != null && !Recompensa.existeRecompensa(usuario.getId(), recompensaCumplida.getTipo())) {
+            recompensaCumplida.crearRecompensa();
+        }
     }
 
     // Limpia los campos del formulario
