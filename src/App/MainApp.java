@@ -1,6 +1,7 @@
 package App;
 
 import Modelos.Usuario;
+import Servidor.WebServer;
 import Vistas.DashboardView;
 import Vistas.LoginView;
 import javafx.application.Application;
@@ -49,6 +50,7 @@ public class MainApp extends Application {
 
     // Método main: lanza la aplicación JavaFX
     public static void main(String[] args) {
+        WebServer.iniciar();
         launch(args);
     }
 }

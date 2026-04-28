@@ -13,6 +13,7 @@ module proyecto.finanzas {
 
     // org.xerial.sqlitejdbc: driver JDBC para SQLite, permite hacer consultas SQL con PreparedStatement
     requires org.xerial.sqlitejdbc;
+    requires jdk.httpserver;
 
     // "opens" permite que JavaFX acceda a las clases de esos paquetes por reflexión en tiempo de ejecución.
     // Sin esto, JavaFX no puede instanciar ni animar los nodos definidos en esos paquetes.
