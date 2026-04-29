@@ -12,7 +12,7 @@ public class Admin extends Persona {
 
     // Constructor: delega directamente al constructor de Persona
     public Admin(int id, String nombre, String contrasena, String correo,
-                 String numeroTelefono, int edad, String cc) {
+                String numeroTelefono, int edad, String cc) {
         super(id, nombre, contrasena, correo, numeroTelefono, edad, cc);
     }
 
@@ -20,7 +20,7 @@ public class Admin extends Persona {
     public void registrarAdmin() {
         String sql = "INSERT INTO admin (id, nombre, contrasena, correo, numero_telefono, edad, cc) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (Connection con = ConexionDB.conectar();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+            PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, this.getId());
             ps.setString(2, this.getNombre());
             ps.setString(3, this.getContrasena());
@@ -38,7 +38,7 @@ public class Admin extends Persona {
     public static Admin leerPerfil(int id) {
         String sql = "SELECT * FROM admin WHERE id = ?";
         try (Connection con = ConexionDB.conectar();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+            PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, id);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
@@ -63,7 +63,7 @@ public class Admin extends Persona {
     public void actualizarAdmin() {
         String sql = "UPDATE admin SET nombre=?, contrasena=?, correo=?, numero_telefono=?, edad=?, cc=? WHERE id=?";
         try (Connection con = ConexionDB.conectar();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+            PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, this.getNombre());
             ps.setString(2, this.getContrasena());
             ps.setString(3, this.getCorreo());
@@ -81,7 +81,7 @@ public class Admin extends Persona {
     public static boolean eliminarAdmin(int id) {
         String sql = "DELETE FROM admin WHERE id = ?";
         try (Connection con = ConexionDB.conectar();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+            PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, id);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {

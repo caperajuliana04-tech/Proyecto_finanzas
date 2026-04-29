@@ -14,7 +14,7 @@ public class Usuario extends Persona {
 
     // Constructor completo
     public Usuario(int id, String nombre, String contrasena, String correo,
-                   String numeroTelefono, int edad, String cc, double saldoActual) {
+                String numeroTelefono, int edad, String cc, double saldoActual) {
         super(id, nombre, contrasena, correo, numeroTelefono, edad, cc);
         this.saldoActual = saldoActual;
     }
@@ -26,7 +26,7 @@ public class Usuario extends Persona {
     public void registrarUsuario() {
         String sql = "INSERT INTO usuario (id, nombre, contrasena, correo, numero_telefono, edad, cc, saldo_actual) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection con = ConexionDB.conectar();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+            PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, this.getId());
             ps.setString(2, this.getNombre());
             ps.setString(3, this.getContrasena());
@@ -55,7 +55,7 @@ public class Usuario extends Persona {
     // Recibe la SQL y un "preparador" funcional que asigna el parámetro de búsqueda.
     private static Usuario buscar(String sql, ConsultaSQL preparador) {
         try (Connection con = ConexionDB.conectar();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+            PreparedStatement ps = con.prepareStatement(sql)) {
             preparador.preparar(ps);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
@@ -80,7 +80,7 @@ public class Usuario extends Persona {
     public void actualizarUsuario() {
         String sql = "UPDATE usuario SET nombre=?, contrasena=?, correo=?, numero_telefono=?, edad=?, cc=?, saldo_actual=? WHERE id=?";
         try (Connection con = ConexionDB.conectar();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+            PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, this.getNombre());
             ps.setString(2, this.getContrasena());
             ps.setString(3, this.getCorreo());
@@ -99,7 +99,7 @@ public class Usuario extends Persona {
     public static boolean eliminarUsuario(int id) {
         String sql = "DELETE FROM usuario WHERE id = ?";
         try (Connection con = ConexionDB.conectar();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+            PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, id);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {

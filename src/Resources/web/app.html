@@ -56,6 +56,15 @@
         Inicio
       </button>
 
+      <button @click="navegarA('graficas')"
+        :class="{'active': seccion==='graficas'}"
+        class="sidebar-link w-full">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+        </svg>
+        Gráficas
+      </button>
+
       <button @click="navegarA('ingresos')"
         :class="{'active': seccion==='ingresos'}"
         class="sidebar-link w-full">
@@ -182,6 +191,99 @@
         </div>
         <p x-show="!resumen?.gastosPorCategoria || Object.keys(resumen.gastosPorCategoria).length === 0"
           class="text-center text-slate-400 text-sm py-8">Sin gastos registrados aún</p>
+      </div>
+    </div>
+
+    <!-- ── GRÁFICAS ───────────────────────────────────────────────────────────── -->
+    <div x-show="!cargando && seccion === 'graficas'" class="p-8 max-w-6xl mx-auto">
+      <h2 class="text-xl font-bold text-slate-800 mb-2">📊 Gráficas financieras</h2>
+      <p class="text-sm text-slate-500 mb-6">Cinco vistas para entender tu situación financiera de un vistazo.</p>
+
+      <!-- 1. Barras: Gastos por categoría -->
+      <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">
+        <h3 class="text-sm font-semibold text-slate-700">1. Gastos por categoría</h3>
+        <p class="text-xs text-slate-400 mt-0.5 mb-4">Eje X: categorías · Eje Y: monto en COP · Cada barra = total gastado en esa categoría</p>
+        <div class="h-72"><canvas id="g1_categoriasBarra"></canvas></div>
+        <p x-show="!estadisticas?.gastosPorCategoria || Object.keys(estadisticas.gastosPorCategoria).length === 0"
+          class="text-center text-slate-400 text-sm py-6">Sin gastos registrados aún</p>
+      </div>
+
+      <!-- 2. Barras: Ingresos vs Gastos -->
+      <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">
+        <h3 class="text-sm font-semibold text-slate-700">2. Ingresos vs Gastos</h3>
+        <p class="text-xs text-slate-400 mt-0.5 mb-4">Comparación de totales acumulados · Barra más alta = mayor monto</p>
+        <div class="h-64"><canvas id="g2_ingresosVsGastos"></canvas></div>
+        <div class="mt-4 grid grid-cols-3 gap-3 text-xs">
+          <div class="bg-slate-50 rounded-lg p-3">
+            <p class="text-slate-400">Total ingresos</p>
+            <p class="font-bold text-emerald-600 mt-1" x-text="formatCOP(estadisticas?.totalIngresos ?? 0)"></p>
+          </div>
+          <div class="bg-slate-50 rounded-lg p-3">
+            <p class="text-slate-400">Total gastos</p>
+            <p class="font-bold text-red-500 mt-1" x-text="formatCOP(estadisticas?.totalGastos ?? 0)"></p>
+          </div>
+          <div class="bg-slate-50 rounded-lg p-3">
+            <p class="text-slate-400">Saldo neto</p>
+            <p class="font-bold mt-1"
+              :class="(estadisticas?.totalIngresos - estadisticas?.totalGastos) >= 0 ? 'text-emerald-600' : 'text-red-500'"
+              x-text="formatCOP((estadisticas?.totalIngresos ?? 0) - (estadisticas?.totalGastos ?? 0))"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Línea: Evolución mensual de gastos -->
+      <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">
+        <h3 class="text-sm font-semibold text-slate-700">3. Evolución mensual de gastos</h3>
+        <p class="text-xs text-slate-400 mt-0.5 mb-4">Eje X: mes · Eje Y: gasto del mes · La línea sube cuando gastaste más</p>
+        <div class="h-72"><canvas id="g3_gastosPorMes"></canvas></div>
+        <p x-show="!estadisticas?.gastosPorMes || Object.keys(estadisticas.gastosPorMes).length === 0"
+          class="text-center text-slate-400 text-sm py-6">Aún no hay suficientes meses con datos</p>
+      </div>
+
+      <!-- 4. Progreso de metas -->
+      <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">
+        <h3 class="text-sm font-semibold text-slate-700">4. Progreso de metas de ahorro</h3>
+        <p class="text-xs text-slate-400 mt-0.5 mb-4">0% (sin ahorro) → 100% (cumplida) · Azul = en curso · Ámbar = +80% · Verde = cumplida</p>
+        <div class="space-y-4">
+          <template x-for="m in metas" :key="m.id">
+            <div>
+              <div class="flex justify-between items-baseline mb-1.5">
+                <span class="text-sm font-semibold text-slate-800" x-text="m.nombre"></span>
+                <span class="text-xs font-bold"
+                  :class="m.progreso >= 100 ? 'text-emerald-600' : m.progreso >= 80 ? 'text-amber-600' : 'text-blue-600'"
+                  x-text="m.progreso.toFixed(1) + '%'"></span>
+              </div>
+              <div class="h-3 bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full rounded-full transition-all"
+                  :class="m.progreso >= 100 ? 'bg-emerald-500' : m.progreso >= 80 ? 'bg-amber-400' : 'bg-blue-500'"
+                  :style="'width: ' + Math.min(m.progreso, 100) + '%'">
+                </div>
+              </div>
+              <div class="flex justify-between text-xs text-slate-500 mt-1.5">
+                <span x-text="formatCOP(m.montoActual) + ' / ' + formatCOP(m.montoObjetivo)"></span>
+                <span x-text="'Falta ' + formatCOP(Math.max(m.montoObjetivo - m.montoActual, 0))"></span>
+              </div>
+            </div>
+          </template>
+        </div>
+        <p x-show="metas.length === 0" class="text-center text-slate-400 text-sm py-6">No tienes metas creadas aún</p>
+      </div>
+
+      <!-- 5. Pie: Distribución porcentual -->
+      <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">
+        <h3 class="text-sm font-semibold text-slate-700">5. Distribución de gastos (%)</h3>
+        <p class="text-xs text-slate-400 mt-0.5 mb-4">Cada porción = una categoría · Tamaño = % del total · El círculo = 100%</p>
+        <div class="max-w-sm mx-auto"><canvas id="g5_distribucionPie"></canvas></div>
+        <div x-show="estadisticas?.gastosPorCategoria && Object.keys(estadisticas.gastosPorCategoria).length > 0"
+          class="mt-4 text-xs text-slate-500 text-center">
+          <span x-show="estadisticas?.concentracionAlta" class="text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg">
+            ⚠ Una categoría supera el 40% — distribución concentrada
+          </span>
+          <span x-show="!estadisticas?.concentracionAlta && estadisticas?.totalGastos > 0"
+            class="text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg">
+            ✓ Distribución equilibrada (ninguna categoría supera el 40%)
+          </span>
+        </div>
       </div>
     </div>
 

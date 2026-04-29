@@ -19,7 +19,7 @@ public class Recompensa {
 
     // Constructor completo
     public Recompensa(int idRecompensa, String tipo, String mensaje, LocalDate fechaDesbloqueo,
-                      boolean desbloqueada, int idUsuario) {
+        boolean desbloqueada, int idUsuario) {
         this.idRecompensa = idRecompensa;
         this.tipo = tipo;
         this.mensaje = mensaje;

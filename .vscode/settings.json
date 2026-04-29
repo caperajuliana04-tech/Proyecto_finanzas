@@ -1,3 +1,9 @@
 {
-    "java.debug.settings.onBuildFailureProceed": true
+    "java.debug.settings.onBuildFailureProceed": true,
+    "code-runner.runInTerminal": true,
+    "code-runner.fileDirectoryAsCwd": false,
+    "code-runner.clearPreviousOutput": true,
+    "code-runner.executorMap": {
+        "java": "mvn -q compile javafx:run"
+    }
 }

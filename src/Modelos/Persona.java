@@ -14,7 +14,7 @@ public class Persona {
 
     // Constructor: inicializa todos los campos de la persona
     public Persona(int id, String nombre, String contrasena, String correo,
-                   String numeroTelefono, int edad, String cc) {
+                String numeroTelefono, int edad, String cc) {
         this.id = id;
         this.nombre = nombre;
         this.contrasena = contrasena;

@@ -53,6 +53,23 @@
     -fx-border-width: 1.6;
 }
 
+.form-input:disabled {
+    -fx-opacity: 0.55;
+    -fx-background-color: #eef2f7;
+}
+
+.form-input-error {
+    -fx-border-color: #dc2626;
+    -fx-border-width: 1.6;
+    -fx-background-color: #fff1f2;
+}
+
+.field-error {
+    -fx-font-size: 12px;
+    -fx-text-fill: #b91c1c;
+    -fx-padding: 2 4 0 4;
+}
+
 .primary-button {
     -fx-background-color: #2563eb;
     -fx-text-fill: white;

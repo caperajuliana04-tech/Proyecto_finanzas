@@ -18,15 +18,26 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
+import java.util.regex.Pattern;
+
 // Pantalla de inicio de sesión.
 // El usuario ingresa su correo y contraseña para acceder al dashboard.
 // Extiende BorderPane para aprovechar el área central del layout.
 public class LoginView extends BorderPane {
 
+    // Regex de correo: usuario@dominio.tld (al menos un punto en el dominio)
+    private static final Pattern PATRON_CORREO =
+        Pattern.compile("^[\\w.+-]+@[\\w-]+\\.[\\w.-]+$");
+    // Longitud mínima de contraseña aceptada
+    private static final int LONGITUD_MIN_CONTRASENA = 4;
+
     private final Stage stage;         // Referencia a la ventana principal para poder cambiar de escena
     private TextField campoCorreo;     // Campo de texto para el correo electrónico
     private PasswordField campoContrasena; // Campo de contraseña (oculta caracteres)
     private Label etiquetaEstado;      // Muestra mensajes de error o éxito al usuario
+    private Label errorCorreo;         // Mensaje de error inline debajo del correo
+    private Label errorContrasena;     // Mensaje de error inline debajo de la contraseña
+    private Button botonIngresar;      // Botón principal: se habilita solo si todo es válido
 
     // Constructor: recibe el stage para poder navegar hacia el dashboard al autenticar
     public LoginView(Stage stage) {
@@ -65,23 +76,34 @@ public class LoginView extends BorderPane {
         campoCorreo.getStyleClass().add("form-input");
 
         campoContrasena = new PasswordField();
-        campoContrasena.setPromptText("Contraseña");
+        campoContrasena.setPromptText("Contraseña (mínimo " + LONGITUD_MIN_CONTRASENA + " caracteres)");
         campoContrasena.getStyleClass().add("form-input");
+        // Bloqueo inicial: la contraseña se habilita solo cuando el correo sea válido
+        campoContrasena.setDisable(true);
 
-        // Agrupa cada campo con su etiqueta descriptiva
+        // Etiquetas de error inline por campo (se muestran/ocultan según validación)
+        errorCorreo = crearEtiquetaError();
+        errorContrasena = crearEtiquetaError();
+
+        // Agrupa cada campo con su etiqueta descriptiva y su mensaje de error
         VBox grupoCampos = new VBox(12,
-            crearGrupo("Correo electrónico", campoCorreo),
-            crearGrupo("Contraseña", campoContrasena)
+            crearGrupo("Correo electrónico", campoCorreo, errorCorreo),
+            crearGrupo("Contraseña", campoContrasena, errorContrasena)
         );
 
         // Botón principal: llama a iniciarSesion() al hacer clic
-        Button botonIngresar = new Button("Iniciar sesión");
+        botonIngresar = new Button("Iniciar sesión");
         botonIngresar.getStyleClass().add("primary-button");
         botonIngresar.setMaxWidth(Double.MAX_VALUE);
         botonIngresar.setOnAction(e -> iniciarSesion());
+        // Bloqueo inicial: el botón se habilita solo cuando ambos campos sean válidos
+        botonIngresar.setDisable(true);
 
         // También permite iniciar sesión presionando Enter desde el campo de contraseña
         campoContrasena.setOnAction(e -> iniciarSesion());
+
+        // Conecta los listeners de validación campo a campo
+        configurarValidaciones();
 
         // Botón secundario: abre la ventana de registro de nuevo usuario
         Button botonRegistro = new Button("Crear cuenta nueva");
@@ -112,35 +134,142 @@ public class LoginView extends BorderPane {
         slide.play();
     }
 
-    // Crea un grupo visual: etiqueta encima del campo de entrada
-    private VBox crearGrupo(String etiquetaTexto, javafx.scene.control.Control campo) {
+    // Crea un grupo visual: etiqueta encima del campo de entrada y, debajo, su error inline
+    private VBox crearGrupo(String etiquetaTexto, javafx.scene.control.Control campo, Label errorInline) {
         Label etiqueta = new Label(etiquetaTexto);
         etiqueta.getStyleClass().add("field-label");
-        return new VBox(6, etiqueta, campo);
+        return new VBox(6, etiqueta, campo, errorInline);
+    }
+
+    // Etiqueta de error que vive bajo cada campo. Empieza oculta (managed=false la saca del layout).
+    private Label crearEtiquetaError() {
+        Label etiqueta = new Label("");
+        etiqueta.getStyleClass().add("field-error");
+        etiqueta.setVisible(false);
+        etiqueta.setManaged(false);
+        return etiqueta;
+    }
+
+    // Engancha listeners para validar correo y contraseña a medida que el usuario escribe
+    // y al perder foco. Mantiene el bloqueo encadenado: contraseña → solo si correo válido,
+    // botón ingresar → solo si ambos válidos.
+    private void configurarValidaciones() {
+        campoCorreo.textProperty().addListener((obs, anterior, nuevo) -> {
+            // Si el correo deja de ser válido, bloquea contraseña y limpia su error
+            if (!correoEsValido()) {
+                campoContrasena.setDisable(true);
+                campoContrasena.clear();
+                ocultarError(campoContrasena, errorContrasena);
+            } else {
+                campoContrasena.setDisable(false);
+            }
+            // Mientras escribe, limpia el error visual hasta que pierda foco
+            ocultarError(campoCorreo, errorCorreo);
+            actualizarBotonIngresar();
+        });
+
+        // Al salir del campo de correo, valida formato y muestra error si aplica
+        campoCorreo.focusedProperty().addListener((obs, antes, ahora) -> {
+            if (!ahora) validarCorreo();
+        });
+
+        campoContrasena.textProperty().addListener((obs, anterior, nuevo) -> {
+            ocultarError(campoContrasena, errorContrasena);
+            actualizarBotonIngresar();
+        });
+
+        campoContrasena.focusedProperty().addListener((obs, antes, ahora) -> {
+            if (!ahora) validarContrasena();
+        });
+    }
+
+    // Devuelve true si el correo cumple el formato esperado
+    private boolean correoEsValido() {
+        return PATRON_CORREO.matcher(campoCorreo.getText().trim()).matches();
+    }
+
+    // Devuelve true si la contraseña tiene al menos LONGITUD_MIN_CONTRASENA caracteres
+    private boolean contrasenaEsValida() {
+        return campoContrasena.getText().trim().length() >= LONGITUD_MIN_CONTRASENA;
+    }
+
+    // Valida el correo al perder foco; muestra error inline si no es válido
+    private boolean validarCorreo() {
+        String texto = campoCorreo.getText().trim();
+        if (texto.isEmpty()) {
+            mostrarError(campoCorreo, errorCorreo, "El correo es obligatorio.");
+            return false;
+        }
+        if (!correoEsValido()) {
+            mostrarError(campoCorreo, errorCorreo, "Formato de correo inválido (ej: nombre@dominio.com).");
+            return false;
+        }
+        ocultarError(campoCorreo, errorCorreo);
+        return true;
+    }
+
+    // Valida la contraseña al perder foco; muestra error inline si no es válida
+    private boolean validarContrasena() {
+        String texto = campoContrasena.getText().trim();
+        if (texto.isEmpty()) {
+            mostrarError(campoContrasena, errorContrasena, "La contraseña es obligatoria.");
+            return false;
+        }
+        if (texto.length() < LONGITUD_MIN_CONTRASENA) {
+            mostrarError(campoContrasena, errorContrasena,
+                "Mínimo " + LONGITUD_MIN_CONTRASENA + " caracteres.");
+            return false;
+        }
+        ocultarError(campoContrasena, errorContrasena);
+        return true;
+    }
+
+    // Habilita el botón "Iniciar sesión" solo cuando ambos campos sean válidos
+    private void actualizarBotonIngresar() {
+        botonIngresar.setDisable(!(correoEsValido() && contrasenaEsValida()));
+    }
+
+    // Pinta el campo en estado de error y muestra el mensaje inline
+    private void mostrarError(javafx.scene.control.Control campo, Label etiquetaError, String mensaje) {
+        if (!campo.getStyleClass().contains("form-input-error")) {
+            campo.getStyleClass().add("form-input-error");
+        }
+        etiquetaError.setText(mensaje);
+        etiquetaError.setVisible(true);
+        etiquetaError.setManaged(true);
+    }
+
+    // Quita el estado de error del campo y oculta el mensaje inline
+    private void ocultarError(javafx.scene.control.Control campo, Label etiquetaError) {
+        campo.getStyleClass().remove("form-input-error");
+        etiquetaError.setVisible(false);
+        etiquetaError.setManaged(false);
     }
 
     // Valida las credenciales ingresadas y navega al dashboard si son correctas
     private void iniciarSesion() {
-        String correo = campoCorreo.getText().trim();
-        String contrasena = campoContrasena.getText().trim();
-
-        // Valida que ambos campos estén llenos
-        if (correo.isEmpty() || contrasena.isEmpty()) {
-            mostrarError("Completa todos los campos.");
+        // Refuerza la validación campo a campo antes de tocar la base de datos
+        boolean correoOk = validarCorreo();
+        boolean contrasenaOk = validarContrasena();
+        if (!correoOk || !contrasenaOk) {
+            actualizarBotonIngresar();
             return;
         }
+
+        String correo = campoCorreo.getText().trim();
+        String contrasena = campoContrasena.getText().trim();
 
         // Busca el usuario en la base de datos por correo
         Usuario usuario = Usuario.buscarPorCorreo(correo);
 
         if (usuario == null) {
-            mostrarError("No existe una cuenta con ese correo.");
+            mostrarErrorGeneral("No existe una cuenta con ese correo.");
             return;
         }
 
         // Verifica que la contraseña coincida
         if (!usuario.getContrasena().equals(contrasena)) {
-            mostrarError("Contraseña incorrecta.");
+            mostrarErrorGeneral("Contraseña incorrecta.");
             return;
         }
 
@@ -160,8 +289,8 @@ public class LoginView extends BorderPane {
         ventana.show();
     }
 
-    // Muestra un mensaje de error con estilo rojo bajo los botones
-    private void mostrarError(String texto) {
+    // Muestra un mensaje de error general (debajo de los botones) con estilo rojo
+    private void mostrarErrorGeneral(String texto) {
         etiquetaEstado.setText(texto);
         etiquetaEstado.getStyleClass().removeAll("status-success", "status-error");
         etiquetaEstado.getStyleClass().add("status-error");

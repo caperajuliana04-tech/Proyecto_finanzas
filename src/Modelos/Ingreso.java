@@ -62,7 +62,7 @@ public class Ingreso {
         List<Ingreso> lista = new ArrayList<>();
         String sql = "SELECT * FROM ingreso WHERE id_usuario = ? ORDER BY fecha DESC";
         try (Connection con = ConexionDB.conectar();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+            PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, idUsuario);
             ResultSet rs = ps.executeQuery();
             // Recorre cada fila del resultado y construye un objeto Ingreso por fila

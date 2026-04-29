@@ -207,7 +207,7 @@ public class GraficasView extends BorderPane {
             for (Map.Entry<String, Double> e : porMes.entrySet()) {
                 String etq = YearMonth.parse(e.getKey(), FMT_MES_IN).format(FMT_MES_OUT);
                 String marca = e.getKey().equals(mayor.getKey()) ? "  ▲ mayor"
-                             : e.getKey().equals(menor.getKey()) ? "  ▼ menor" : "";
+                            : e.getKey().equals(menor.getKey()) ? "  ▼ menor" : "";
                 Label f = new Label("  • " + etq + "   $" + FMT.format(e.getValue().longValue()) + " COP" + marca);
                 f.setStyle("-fx-font-size: 13px;");
                 resumen.getChildren().add(f);

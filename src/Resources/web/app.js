@@ -24,6 +24,7 @@ function app() {
     cargando: false,
 
     resumen:     null,
+    estadisticas: null,
     ingresos:    [],
     gastos:      [],
     metas:       [],
@@ -31,6 +32,7 @@ function app() {
     recompensas: [],
 
     _chart: null,
+    _charts: { g1: null, g2: null, g3: null, g5: null },
 
     mostrarFormIngreso: false,
     mostrarFormGasto:   false,
@@ -77,6 +79,7 @@ function app() {
 
       try {
         if (sec === 'inicio')       await this.cargarInicio();
+        else if (sec === 'graficas')    await this.cargarGraficas();
         else if (sec === 'ingresos')    this.ingresos    = await this.api('ingresos')    ?? [];
         else if (sec === 'gastos')      this.gastos      = await this.api('gastos')      ?? [];
         else if (sec === 'metas')       this.metas       = await this.api('metas')       ?? [];
@@ -118,6 +121,179 @@ function app() {
             tooltip: {
               callbacks: {
                 label: (ctx) => ' ' + formatCOP(ctx.parsed)
+              }
+            }
+          }
+        }
+      });
+    },
+
+    // ── Gráficas (5 vistas) ──────────────────────────────────────────────────────
+    async cargarGraficas() {
+      const [resumen, gastos, metas] = await Promise.all([
+        this.api('inicio'), this.api('gastos'), this.api('metas')
+      ]);
+      const gastosPorMes = this.agruparGastosPorMes(gastos ?? []);
+      const gastosPorCategoria = resumen?.gastosPorCategoria ?? {};
+      const totalG = resumen?.totalGastos ?? 0;
+      // Detecta si alguna categoría concentra más del 40% del total (interpretación de la gráfica 5)
+      const concentracionAlta = totalG > 0 &&
+        Object.values(gastosPorCategoria).some(v => (v / totalG) * 100 > 40);
+
+      this.estadisticas = {
+        totalIngresos: resumen?.totalIngresos ?? 0,
+        totalGastos: totalG,
+        gastosPorCategoria,
+        gastosPorMes,
+        concentracionAlta
+      };
+      this.metas = metas ?? [];
+      this.$nextTick(() => this.renderTodasLasGraficas());
+    },
+
+    // Agrupa la lista de gastos por mes (yyyy-MM) sumando montos
+    agruparGastosPorMes(gastos) {
+      const out = {};
+      for (const g of gastos) {
+        if (!g.fecha) continue;
+        const mes = g.fecha.slice(0, 7); // "yyyy-MM-dd" → "yyyy-MM"
+        out[mes] = (out[mes] ?? 0) + Number(g.monto);
+      }
+      // Ordena cronológicamente
+      return Object.fromEntries(Object.entries(out).sort(([a],[b]) => a.localeCompare(b)));
+    },
+
+    renderTodasLasGraficas() {
+      this.renderG1Categorias();
+      this.renderG2IngresosVsGastos();
+      this.renderG3GastosPorMes();
+      this.renderG5Distribucion();
+      // La gráfica 4 (progreso de metas) se renderiza con HTML/CSS, no necesita Chart.js
+    },
+
+    // 1. BARRAS — Gastos por categoría (orden descendente)
+    renderG1Categorias() {
+      const canvas = document.getElementById('g1_categoriasBarra');
+      if (!canvas) return;
+      if (this._charts.g1) { this._charts.g1.destroy(); this._charts.g1 = null; }
+      const cats = Object.entries(this.estadisticas.gastosPorCategoria)
+        .sort(([,a],[,b]) => b - a);
+      if (cats.length === 0) return;
+      this._charts.g1 = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: cats.map(([k]) => k),
+          datasets: [{
+            data: cats.map(([,v]) => v),
+            backgroundColor: cats.map((_, i) => PALETA[i % PALETA.length]),
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: (c) => ' ' + formatCOP(c.parsed.y) } }
+          },
+          scales: {
+            y: { beginAtZero: true, ticks: { callback: (v) => formatCorto(v) } },
+            x: { ticks: { maxRotation: 30, minRotation: 0 } }
+          }
+        }
+      });
+    },
+
+    // 2. BARRAS — Ingresos vs Gastos (dos barras grandes)
+    renderG2IngresosVsGastos() {
+      const canvas = document.getElementById('g2_ingresosVsGastos');
+      if (!canvas) return;
+      if (this._charts.g2) { this._charts.g2.destroy(); this._charts.g2 = null; }
+      this._charts.g2 = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: ['Ingresos', 'Gastos'],
+          datasets: [{
+            data: [this.estadisticas.totalIngresos, this.estadisticas.totalGastos],
+            backgroundColor: ['#10b981', '#ef4444'],
+            borderRadius: 8,
+            barThickness: 80
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: (c) => ' ' + formatCOP(c.parsed.y) } }
+          },
+          scales: {
+            y: { beginAtZero: true, ticks: { callback: (v) => formatCorto(v) } }
+          }
+        }
+      });
+    },
+
+    // 3. LÍNEA — Evolución mensual de gastos
+    renderG3GastosPorMes() {
+      const canvas = document.getElementById('g3_gastosPorMes');
+      if (!canvas) return;
+      if (this._charts.g3) { this._charts.g3.destroy(); this._charts.g3 = null; }
+      const meses = Object.entries(this.estadisticas.gastosPorMes);
+      if (meses.length === 0) return;
+      this._charts.g3 = new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels: meses.map(([k]) => formatMes(k)),
+          datasets: [{
+            data: meses.map(([,v]) => v),
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            tension: 0.3,
+            fill: true,
+            pointBackgroundColor: '#3b82f6',
+            pointRadius: 4,
+            pointHoverRadius: 6
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: (c) => ' ' + formatCOP(c.parsed.y) } }
+          },
+          scales: {
+            y: { beginAtZero: true, ticks: { callback: (v) => formatCorto(v) } }
+          }
+        }
+      });
+    },
+
+    // 5. PIE — Distribución porcentual de gastos
+    renderG5Distribucion() {
+      const canvas = document.getElementById('g5_distribucionPie');
+      if (!canvas) return;
+      if (this._charts.g5) { this._charts.g5.destroy(); this._charts.g5 = null; }
+      const cats = Object.entries(this.estadisticas.gastosPorCategoria)
+        .sort(([,a],[,b]) => b - a);
+      if (cats.length === 0) return;
+      const total = cats.reduce((s, [,v]) => s + v, 0);
+      this._charts.g5 = new Chart(canvas, {
+        type: 'pie',
+        data: {
+          labels: cats.map(([k]) => k),
+          datasets: [{
+            data: cats.map(([,v]) => v),
+            backgroundColor: cats.map((_, i) => PALETA[i % PALETA.length]),
+            borderWidth: 2,
+            borderColor: '#fff'
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'bottom', labels: { padding: 14, boxWidth: 12, font: { size: 12 } } },
+            tooltip: {
+              callbacks: {
+                label: (c) => ` ${c.label}: ${formatCOP(c.parsed)} (${(c.parsed / total * 100).toFixed(1)}%)`
               }
             }
           }
@@ -212,4 +388,18 @@ function app() {
 
 function formatCOP(v) {
   return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(v);
+}
+
+// Formato corto para los ejes Y de las gráficas: $1.5M, $500K, $0
+function formatCorto(v) {
+  if (v >= 1_000_000) return '$' + (v / 1_000_000).toFixed(1) + 'M';
+  if (v >= 1_000)     return '$' + Math.round(v / 1_000) + 'K';
+  return '$' + Math.round(v);
+}
+
+// Convierte "yyyy-MM" a etiqueta legible "Ene 2026"
+function formatMes(yyyymm) {
+  const [y, m] = yyyymm.split('-').map(Number);
+  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  return meses[m - 1] + ' ' + y;
 }

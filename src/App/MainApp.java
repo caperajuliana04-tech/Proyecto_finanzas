@@ -1,7 +1,6 @@
 package App;
 
 import Modelos.Usuario;
-import Servidor.WebServer;
 import Vistas.DashboardView;
 import Vistas.LoginView;
 import javafx.application.Application;
@@ -48,9 +47,6 @@ public class MainApp extends Application {
         stage.setScene(escena);
     }
 
-    // Método main: lanza la aplicación JavaFX
-    public static void main(String[] args) {
-        WebServer.iniciar();
-        launch(args);
-    }
+    // El arranque real ocurre en App.Launcher (main no extiende Application,
+    // así el IDE puede lanzar la app desde el botón Play sin --module-path).
 }
